@@ -28,8 +28,6 @@ import (
 var (
 	// ErrNotFoundDomain domain is not found
 	ErrNotFoundDomain = errors.New("whoisparser: domain is not found")
-	// ErrNotFoundASN asn is not found
-	ErrNotFoundASN = errors.New("whoisparser: asn is not found")
 	// ErrReservedDomain domain is reserved
 	ErrReservedDomain = errors.New("whoisparser: domain is reserved to register")
 	// ErrPremiumDomain domain is available to register at premium price
