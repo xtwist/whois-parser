@@ -43,13 +43,24 @@ func License() string {
 	return "Licensed under the Apache License 2.0"
 }
 
+// ASNInfo holds ASN information
+type ASNInfo struct {
+	ASNumber     string
+	ASName       string
+	ASBlock      string
+	Description  string
+	AbuseContact string
+	Uplinks      []string
+	Peers        []string
+}
+
 // Parse returns parsed whois info
 func Parse(text string) (whoisInfo WhoisInfo, err error) { //nolint:cyclop
 	name, extension := searchDomain(text)
-	if name == "" {
-		err = getDomainErrorType(text)
-		return
-	}
+	//if name == "" {
+	//	err = getDomainErrorType(text)
+	//	return
+	//}
 
 	if extension != "" && isExtNotFoundDomain(text, extension) {
 		err = ErrNotFoundDomain
@@ -68,6 +79,12 @@ func Parse(text string) (whoisInfo WhoisInfo, err error) { //nolint:cyclop
 
 	whoisText, _ := Prepare(text, domain.Extension)
 	whoisLines := strings.Split(whoisText, "\n")
+
+	var asnInfo ASNInfo
+	if strings.Contains(whoisText, "aut-num") {
+		asnInfo = parseASN(whoisLines)
+	}
+
 	for i := 0; i < len(whoisLines); i++ {
 		line := strings.TrimSpace(whoisLines[i])
 		if len(line) < 5 || !strings.Contains(line, ":") {
@@ -182,6 +199,8 @@ func Parse(text string) (whoisInfo WhoisInfo, err error) { //nolint:cyclop
 	domain.Status = xslice.Unique(domain.Status).([]string)
 
 	whoisInfo.Domain = domain
+	whoisInfo.ASN = &asnInfo
+
 	if *registrar != (Contact{}) {
 		whoisInfo.Registrar = registrar
 	}
@@ -243,6 +262,38 @@ func parseContact(contact *Contact, name, value string) {
 	case "registrant_email":
 		contact.Email = strings.ToLower(value)
 	}
+}
+
+// parseASN parses ASN information from whois text
+func parseASN(lines []string) ASNInfo {
+	var asnInfo ASNInfo
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if len(line) < 5 || !strings.Contains(line, ":") {
+			continue
+		}
+		parts := strings.SplitN(line, ":", 2)
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+
+		switch key {
+		case "aut-num":
+			asnInfo.ASNumber = value
+		case "as-name":
+			asnInfo.ASName = value
+		case "as-block":
+			asnInfo.ASBlock = value
+		case "descr":
+			asnInfo.Description = value
+		case "abuse-mailbox":
+			asnInfo.AbuseContact = value
+		case "import":
+			asnInfo.Uplinks = append(asnInfo.Uplinks, value)
+		case "export":
+			asnInfo.Peers = append(asnInfo.Peers, value)
+		}
+	}
+	return asnInfo
 }
 
 var searchDomainRx1 = regexp.MustCompile(`(?i)\[?domain\:?(\s*\_?name)?\]?[\s\.]*\:?` +

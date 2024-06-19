@@ -24,6 +24,7 @@ import "time"
 // WhoisInfo storing domain whois info
 type WhoisInfo struct {
 	Domain         *Domain  `json:"domain,omitempty"`
+	ASN            *ASNInfo `json:"asn,omitempty"`
 	Registrar      *Contact `json:"registrar,omitempty"`
 	Registrant     *Contact `json:"registrant,omitempty"`
 	Administrative *Contact `json:"administrative,omitempty"`
