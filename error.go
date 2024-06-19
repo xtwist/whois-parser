@@ -28,6 +28,8 @@ import (
 var (
 	// ErrNotFoundDomain domain is not found
 	ErrNotFoundDomain = errors.New("whoisparser: domain is not found")
+	// ErrNotFoundASN asn is not found
+	ErrNotFoundASN = errors.New("whoisparser: asn is not found")
 	// ErrReservedDomain domain is reserved
 	ErrReservedDomain = errors.New("whoisparser: domain is reserved to register")
 	// ErrPremiumDomain domain is available to register at premium price
@@ -53,9 +55,26 @@ func getDomainErrorType(data string) error {
 		return ErrReservedDomain
 	case isLimitExceeded(data):
 		return ErrDomainLimitExceed
+	//default:
+	//	return ErrDomainDataInvalid
 	default:
-		return ErrDomainDataInvalid
+		return nil
 	}
+}
+
+type LookupType string
+
+const (
+	LookupASN    LookupType = "asn"
+	LookupDomain LookupType = "domain"
+)
+
+func getLookupType(text string) LookupType {
+	if strings.Contains(text, "ASNumber") || strings.Contains(text, "aut-num") {
+		return LookupASN
+	}
+
+	return LookupDomain
 }
 
 // isNotFoundDomain returns if domain is not found

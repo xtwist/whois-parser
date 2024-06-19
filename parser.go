@@ -20,6 +20,7 @@
 package whoisparser
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 
@@ -79,35 +80,47 @@ type ASNInfo struct {
 
 // Parse returns parsed whois info
 func Parse(text string) (whoisInfo WhoisInfo, err error) { //nolint:cyclop
-	name, extension := searchDomain(text)
-	//if name == "" {
-	//	err = getDomainErrorType(text)
-	//	return
-	//}
-
-	if extension != "" && isExtNotFoundDomain(text, extension) {
-		err = ErrNotFoundDomain
+	if err = getDomainErrorType(text); err != nil {
 		return
 	}
 
-	domain := &Domain{}
+	lt := getLookupType(text)
+
+	var domain = &Domain{}
+	if lt == LookupDomain {
+		name, extension := searchDomain(text)
+		if name == "" {
+			err = errors.New("domain name is missing")
+			return
+		}
+
+		if extension != "" && isExtNotFoundDomain(text, extension) {
+			err = ErrNotFoundDomain
+			return
+		}
+
+		domain.Name, _ = idna.ToASCII(name)
+		domain.Extension, _ = idna.ToASCII(extension)
+	}
+
 	registrar := &Contact{}
 	registrant := &Contact{}
 	administrative := &Contact{}
 	technical := &Contact{}
 	billing := &Contact{}
 
-	domain.Name, _ = idna.ToASCII(name)
-	domain.Extension, _ = idna.ToASCII(extension)
-
 	whoisText, _ := Prepare(text, domain.Extension)
 	whoisLines := strings.Split(whoisText, "\n")
 
-	var asnInfo ASNInfo
-	if strings.Contains(whoisText, "ASNumber") {
-		asnInfo = parseARINASN(whoisLines)
-	} else if strings.Contains(whoisText, "aut-num") {
-		asnInfo = parseASN(whoisLines)
+	var asnInfo = &ASNInfo{}
+
+	if lt == LookupASN {
+		// very primitive here, nothing fancy
+		if strings.Contains(whoisText, "ASNumber") {
+			asnInfo = parseARINASN(whoisLines)
+		} else if strings.Contains(whoisText, "aut-num") {
+			asnInfo = parseASN(whoisLines)
+		}
 	}
 
 	for i := 0; i < len(whoisLines); i++ {
@@ -224,7 +237,7 @@ func Parse(text string) (whoisInfo WhoisInfo, err error) { //nolint:cyclop
 	domain.Status = xslice.Unique(domain.Status).([]string)
 
 	whoisInfo.Domain = domain
-	whoisInfo.ASN = &asnInfo
+	whoisInfo.ASN = asnInfo
 
 	if *registrar != (Contact{}) {
 		whoisInfo.Registrar = registrar
@@ -290,7 +303,7 @@ func parseContact(contact *Contact, name, value string) {
 }
 
 // parseASN parses ASN information from whois text
-func parseASN(lines []string) ASNInfo {
+func parseASN(lines []string) *ASNInfo {
 	var asnInfo ASNInfo
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -318,11 +331,11 @@ func parseASN(lines []string) ASNInfo {
 			asnInfo.Peers = append(asnInfo.Peers, value)
 		}
 	}
-	return asnInfo
+	return &asnInfo
 }
 
 // parseARINASN parses ARIN-style ASN information from whois text
-func parseARINASN(lines []string) ASNInfo {
+func parseARINASN(lines []string) *ASNInfo {
 	var asnInfo ASNInfo
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -382,7 +395,7 @@ func parseARINASN(lines []string) ASNInfo {
 			asnInfo.OrgAbuseRef = value
 		}
 	}
-	return asnInfo
+	return &asnInfo
 }
 
 var searchDomainRx1 = regexp.MustCompile(`(?i)\[?domain\:?(\s*\_?name)?\]?[\s\.]*\:?` +
