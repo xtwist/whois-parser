@@ -81,7 +81,7 @@ func Parse(text string) (whoisInfo WhoisInfo, err error) { //nolint:cyclop
 	whoisLines := strings.Split(whoisText, "\n")
 
 	var asnInfo ASNInfo
-	if strings.Contains(whoisText, "aut-num") {
+	if strings.Contains(whoisText, "aut-num") || strings.Contains(whoisText, "ASNumber") {
 		asnInfo = parseASN(whoisLines)
 	}
 
