@@ -50,8 +50,31 @@ type ASNInfo struct {
 	ASBlock      string
 	Description  string
 	AbuseContact string
-	Uplinks      []string
-	Peers        []string
+
+	ASHandle       string
+	RegDate        string
+	Updated        string
+	Ref            string
+	OrgName        string
+	OrgId          string
+	Address        string
+	City           string
+	StateProv      string
+	PostalCode     string
+	Country        string
+	OrgTechHandle  string
+	OrgTechName    string
+	OrgTechPhone   string
+	OrgTechEmail   string
+	OrgTechRef     string
+	OrgAbuseHandle string
+	OrgAbuseName   string
+	OrgAbusePhone  string
+	OrgAbuseEmail  string
+	OrgAbuseRef    string
+
+	Uplinks []string
+	Peers   []string
 }
 
 // Parse returns parsed whois info
@@ -81,7 +104,9 @@ func Parse(text string) (whoisInfo WhoisInfo, err error) { //nolint:cyclop
 	whoisLines := strings.Split(whoisText, "\n")
 
 	var asnInfo ASNInfo
-	if strings.Contains(whoisText, "aut-num") || strings.Contains(whoisText, "ASNumber") {
+	if strings.Contains(whoisText, "ASNumber") {
+		asnInfo = parseARINASN(whoisLines)
+	} else if strings.Contains(whoisText, "aut-num") {
 		asnInfo = parseASN(whoisLines)
 	}
 
@@ -291,6 +316,70 @@ func parseASN(lines []string) ASNInfo {
 			asnInfo.Uplinks = append(asnInfo.Uplinks, value)
 		case "export":
 			asnInfo.Peers = append(asnInfo.Peers, value)
+		}
+	}
+	return asnInfo
+}
+
+// parseARINASN parses ARIN-style ASN information from whois text
+func parseARINASN(lines []string) ASNInfo {
+	var asnInfo ASNInfo
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if len(line) < 5 || !strings.Contains(line, ":") {
+			continue
+		}
+		parts := strings.SplitN(line, ":", 2)
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+
+		switch key {
+		case "ASNumber":
+			asnInfo.ASNumber = value
+		case "ASName":
+			asnInfo.ASName = value
+		case "ASHandle":
+			asnInfo.ASHandle = value
+		case "RegDate":
+			asnInfo.RegDate = value
+		case "Updated":
+			asnInfo.Updated = value
+		case "Ref":
+			asnInfo.Ref = value
+		case "OrgName":
+			asnInfo.OrgName = value
+		case "OrgId":
+			asnInfo.OrgId = value
+		case "Address":
+			asnInfo.Address = value
+		case "City":
+			asnInfo.City = value
+		case "StateProv":
+			asnInfo.StateProv = value
+		case "PostalCode":
+			asnInfo.PostalCode = value
+		case "Country":
+			asnInfo.Country = value
+		case "OrgTechHandle":
+			asnInfo.OrgTechHandle = value
+		case "OrgTechName":
+			asnInfo.OrgTechName = value
+		case "OrgTechPhone":
+			asnInfo.OrgTechPhone = value
+		case "OrgTechEmail":
+			asnInfo.OrgTechEmail = value
+		case "OrgTechRef":
+			asnInfo.OrgTechRef = value
+		case "OrgAbuseHandle":
+			asnInfo.OrgAbuseHandle = value
+		case "OrgAbuseName":
+			asnInfo.OrgAbuseName = value
+		case "OrgAbusePhone":
+			asnInfo.OrgAbusePhone = value
+		case "OrgAbuseEmail":
+			asnInfo.OrgAbuseEmail = value
+		case "OrgAbuseRef":
+			asnInfo.OrgAbuseRef = value
 		}
 	}
 	return asnInfo
