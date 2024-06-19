@@ -173,6 +173,8 @@ func isBlockedDomain(data string) bool {
 		"subscribes to the uni eps",
 		// Gandi AdultBlock
 		"subscribes to the adultblock",
+		// RIPE Whois block for abuse
+		"access denied for",
 	}
 
 	return containsIn(strings.ToLower(data), blockedKeys)
